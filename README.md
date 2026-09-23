@@ -57,7 +57,7 @@ npm run dev            # API sur :3000, interface sur :5173
 
 ## Déploiement (Docker / Dockge)
 
-Guide pas à pas pour Dockge derrière Nginx Proxy Manager : **[DOCKGE.md](DOCKGE.md)**.
+Guide pas à pas pour Dockge derrière un Nginx Proxy Manager situé sur un autre serveur : **[DOCKGE.md](DOCKGE.md)**.
 
 ```bash
 docker compose up -d --build
