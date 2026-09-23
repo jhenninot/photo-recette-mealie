@@ -1,0 +1,11 @@
+services:
+  photo-recette:
+    build: .
+    image: photo-recette-mealie:latest
+    container_name: photo-recette-mealie
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
