@@ -24,35 +24,23 @@ Téléphone ──HTTPS──▶ NPM (serveur A) ──HTTP, réseau local──
 - Un **jeton API Mealie** : dans Mealie, *Profil → Gérer vos jetons API → Générer*.
   Créez-le avec un compte qui a le droit de créer des recettes.
 
-## 1. Récupérer le code dans le dossier des stacks (serveur B)
+## 1. Créer la stack dans Dockge (serveur B)
 
-L'image Docker est construite à partir du code source. Il faut donc cloner le dépôt directement dans le dossier des stacks de Dockge.
+L'image est construite automatiquement par GitHub à chaque mise à jour du code et publiée sur
+`ghcr.io/jhenninot/photo-recette-mealie` (PC x86 et ARM/Raspberry Pi). Rien n'est compilé sur le serveur
+et il n'est pas nécessaire de cloner le dépôt.
 
-```bash
-cd /opt/stacks
-git clone https://github.com/jhenninot/photo-recette-mealie.git
-```
-
-> Le dépôt étant privé, `git` demandera un identifiant GitHub et, comme mot de passe, un
-> **jeton d'accès personnel** (GitHub → *Settings → Developer settings → Personal access tokens*,
-> droit *Contents: Read* sur ce dépôt). Vous pouvez aussi utiliser une clé SSH de déploiement.
-
-Le dossier `/opt/stacks/photo-recette-mealie` apparaît alors comme une stack dans Dockge, grâce au fichier `compose.yaml`.
-
-## 2. Configurer la stack dans Dockge (serveur B)
-
-Dans Dockge, ouvrez la stack **photo-recette-mealie** puis cliquez sur **Modifier**.
+Dans Dockge, cliquez sur **+ Composer**, nommez la stack `photo-recette-mealie`, puis remplissez
+le `compose.yaml` et le `.env` comme ci-dessous.
 
 ### compose.yaml
 
-NPM étant sur une autre machine, l'application publie simplement son port 3000 sur le serveur B.
-Le `compose.yaml` fourni convient tel quel :
+NPM étant sur une autre machine, l'application publie simplement son port 3000 sur le serveur B :
 
 ```yaml
 services:
   photo-recette:
-    build: .
-    image: photo-recette-mealie:latest
+    image: ghcr.io/jhenninot/photo-recette-mealie:latest
     container_name: photo-recette-mealie
     restart: unless-stopped
     env_file: .env
@@ -95,7 +83,7 @@ ADMIN_PASSWORD=un-mot-de-passe-solide
 >   (IP et port publiés par le conteneur Mealie). C'est plus rapide et ne dépend pas de NPM.
 >   Gardez dans ce cas `MEALIE_PUBLIC_URL` sur l'adresse publique pour que les liens fonctionnent sur le téléphone.
 
-Cliquez sur **Enregistrer**, puis **Démarrer**. Le premier lancement construit l'image, ce qui prend 1 à 2 minutes.
+Cliquez sur **Déployer**. Dockge télécharge l'image puis démarre le conteneur.
 Dans les journaux, vous devez voir :
 
 ```
@@ -127,7 +115,7 @@ sudo iptables -I DOCKER-USER -p tcp -m conntrack --ctorigdstport 3000 --ctdir OR
 Pour la rendre permanente : `sudo apt install iptables-persistent && sudo netfilter-persistent save`.
 Si votre réseau local est de confiance, vous pouvez sauter cette étape.
 
-## 3. Créer l'hôte dans Nginx Proxy Manager (serveur A)
+## 2. Créer l'hôte dans Nginx Proxy Manager (serveur A)
 
 Dans NPM : **Hosts → Proxy Hosts → Add Proxy Host**.
 
@@ -158,7 +146,7 @@ proxy_send_timeout 180s;
 
 Enregistrez. L'application est disponible sur `https://recettes-photo.example.com`.
 
-## 4. Vérifier
+## 3. Vérifier
 
 1. Ouvrez l'application et connectez-vous avec le compte administrateur.
 2. Touchez votre nom en haut à droite, puis **Tester la connexion** (carte « Connexion à Mealie »).
@@ -170,23 +158,11 @@ pour l'avoir comme une vraie application.
 
 ## Mettre à jour
 
-```bash
-cd /opt/stacks/photo-recette-mealie
-git pull
-```
+Dans Dockge, ouvrez la stack et cliquez sur **Mettre à jour** : Dockge télécharge la dernière image
+`latest` et redémarre le conteneur. Le `.env` et le dossier `data/` sont conservés.
 
-Puis, dans Dockge, ouvrez la stack et utilisez le **terminal** de la stack (ou un shell sur le serveur) :
-
-```bash
-docker compose up -d --build
-```
-
-> Le bouton **Mettre à jour** de Dockge fait un `pull` d'image : il ne reconstruit pas une image
-> construite localement. D'où la commande `--build` ci-dessus.
->
-> `git pull` ne touche ni à votre `.env` ni au dossier `data/` (ils sont ignorés par git).
-> En revanche, si vous avez modifié `compose.yaml` à l'étape 3, `git pull` peut signaler un conflit. Dans ce cas :
-> `git stash && git pull && git stash pop`.
+> Pour figer une version précise plutôt que suivre `latest`, remplacez le tag de l'image,
+> par exemple `ghcr.io/jhenninot/photo-recette-mealie:1.0` (disponible dès qu'une version `v1.0.0` est publiée).
 
 ## Gérer les utilisateurs
 

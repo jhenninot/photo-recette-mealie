@@ -59,8 +59,13 @@ npm run dev            # API sur :3000, interface sur :5173
 
 Guide pas à pas pour Dockge derrière un Nginx Proxy Manager situé sur un autre serveur : **[DOCKGE.md](DOCKGE.md)**.
 
+L'image est publiée automatiquement sur `ghcr.io/jhenninot/photo-recette-mealie` (amd64 et arm64)
+par la GitHub Action `.github/workflows/docker.yml` : tag `latest` à chaque push sur `main`,
+tags `X.Y.Z` / `X.Y` pour chaque tag git `vX.Y.Z`.
+
 ```bash
-docker compose up -d --build
+docker compose up -d        # utilise l'image publiée
+docker build -t photo-recette-mealie .   # ou construire l'image localement
 ```
 
 Les comptes et le secret de session sont conservés dans `./data`. Pour l'installer comme application sur le téléphone (PWA), servez-la en **HTTPS**, par exemple derrière votre reverse proxy habituel.

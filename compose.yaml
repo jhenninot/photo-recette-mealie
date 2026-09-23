@@ -1,7 +1,6 @@
 services:
   photo-recette:
-    build: .
-    image: photo-recette-mealie:latest
+    image: ghcr.io/jhenninot/photo-recette-mealie:latest
     container_name: photo-recette-mealie
     restart: unless-stopped
     env_file: .env
