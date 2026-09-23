@@ -1,8 +1,10 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { mdiAccount, mdiAccountGroup, mdiAccountPlus, mdiArrowLeft, mdiDelete, mdiKeyVariant, mdiLan, mdiLockReset } from '@mdi/js'
 import { api, session } from '../api.js'
+import MdiIcon from '../components/MdiIcon.vue'
 
-const emit = defineEmits(['logout'])
+const emit = defineEmits(['back'])
 
 const pwd = reactive({ currentPassword: '', newPassword: '', message: '', error: '' })
 
@@ -77,48 +79,64 @@ onMounted(() => {
 
 <template>
   <section class="stack">
-    <div class="row between">
-      <h2>Mon compte</h2>
-      <button class="ghost small" @click="emit('logout')">Se déconnecter</button>
+    <div class="page-title">
+      <div class="icon-circle"><MdiIcon :path="mdiAccount" :size="40" /></div>
+      <h2>{{ session.user?.username }}</h2>
+      <p>{{ session.user?.isAdmin ? 'Administrateur' : 'Utilisateur' }}</p>
+      <hr class="divider" />
     </div>
 
-    <form class="card stack" @submit.prevent="changePassword">
-      <h3>Changer de mot de passe</h3>
-      <label>Mot de passe actuel<input v-model="pwd.currentPassword" type="password" autocomplete="current-password" required /></label>
-      <label>Nouveau mot de passe<input v-model="pwd.newPassword" type="password" autocomplete="new-password" minlength="8" required /></label>
-      <p v-if="pwd.error" class="error">{{ pwd.error }}</p>
-      <p v-if="pwd.message" class="ok">{{ pwd.message }}</p>
-      <button class="primary">Enregistrer</button>
+    <form class="card left-border" @submit.prevent="changePassword">
+      <div class="card-title"><MdiIcon :path="mdiKeyVariant" :size="22" /> Changer de mot de passe</div>
+      <div class="card-text">
+        <label class="field"><span>Mot de passe actuel</span><input v-model="pwd.currentPassword" type="password" autocomplete="current-password" required /></label>
+        <label class="field"><span>Nouveau mot de passe</span><input v-model="pwd.newPassword" type="password" autocomplete="new-password" minlength="8" required /></label>
+        <p v-if="pwd.error" class="error">{{ pwd.error }}</p>
+        <p v-if="pwd.message" class="ok">{{ pwd.message }}</p>
+      </div>
+      <div class="card-actions"><button class="btn elevated success">Enregistrer</button></div>
     </form>
 
     <template v-if="session.user?.isAdmin">
-      <div class="card stack">
-        <h3>Utilisateurs</h3>
-        <ul class="users">
-          <li v-for="u in users" :key="u.username">
-            <span>{{ u.username }} <small v-if="u.isAdmin" class="badge">admin</small></span>
-            <span class="row">
-              <button class="ghost small" @click="resetPassword(u.username)">Mot de passe</button>
-              <button v-if="u.username !== session.user.username" class="ghost small danger" @click="removeUser(u.username)">Supprimer</button>
-            </span>
-          </li>
-        </ul>
-        <form class="stack" @submit.prevent="addUser">
-          <div class="grid">
-            <label>Identifiant<input v-model="newUser.username" autocapitalize="none" required /></label>
-            <label>Mot de passe<input v-model="newUser.password" type="password" autocomplete="new-password" minlength="8" required /></label>
+      <div class="card left-border">
+        <div class="card-title"><MdiIcon :path="mdiAccountGroup" :size="22" /> Utilisateurs</div>
+        <div class="card-text">
+          <ul class="users">
+            <li v-for="u in users" :key="u.username">
+              <span class="name">{{ u.username }} <span v-if="u.isAdmin" class="badge">admin</span></span>
+              <span class="row">
+                <button class="btn icon" title="Réinitialiser le mot de passe" @click="resetPassword(u.username)">
+                  <MdiIcon :path="mdiLockReset" :size="20" />
+                </button>
+                <button v-if="u.username !== session.user.username" class="btn icon error-text" title="Supprimer" @click="removeUser(u.username)">
+                  <MdiIcon :path="mdiDelete" :size="20" />
+                </button>
+              </span>
+            </li>
+          </ul>
+        </div>
+        <form @submit.prevent="addUser">
+          <div class="card-text">
+            <div class="grid">
+              <label class="field"><span>Identifiant</span><input v-model="newUser.username" autocapitalize="none" required /></label>
+              <label class="field"><span>Mot de passe</span><input v-model="newUser.password" type="password" autocomplete="new-password" minlength="8" required /></label>
+            </div>
+            <label class="checkbox"><input v-model="newUser.isAdmin" type="checkbox" /> Administrateur</label>
+            <p v-if="adminError" class="error">{{ adminError }}</p>
           </div>
-          <label class="check"><input v-model="newUser.isAdmin" type="checkbox" /> Administrateur</label>
-          <p v-if="adminError" class="error">{{ adminError }}</p>
-          <button class="primary">Ajouter l'utilisateur</button>
+          <div class="card-actions">
+            <button class="btn elevated success"><MdiIcon :path="mdiAccountPlus" :size="18" /> Créer</button>
+          </div>
         </form>
       </div>
 
-      <div class="card stack">
-        <h3>Connexion à Mealie</h3>
-        <button @click="checkMealie">Tester la connexion</button>
-        <p v-if="mealieStatus">{{ mealieStatus }}</p>
+      <div class="card left-border">
+        <div class="card-title"><MdiIcon :path="mdiLan" :size="22" /> Connexion à Mealie</div>
+        <div v-if="mealieStatus" class="card-text"><p>{{ mealieStatus }}</p></div>
+        <div class="card-actions"><button class="btn elevated info" @click="checkMealie">Tester la connexion</button></div>
       </div>
     </template>
+
+    <button class="btn text" @click="emit('back')"><MdiIcon :path="mdiArrowLeft" :size="18" /> Retour</button>
   </section>
 </template>

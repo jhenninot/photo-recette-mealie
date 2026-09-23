@@ -1,10 +1,12 @@
 <script setup>
 import { nextTick, ref } from 'vue'
+import { mdiArrowUp, mdiClose, mdiPlus } from '@mdi/js'
+import MdiIcon from './MdiIcon.vue'
 
 const items = defineModel({ type: Array, required: true })
 defineProps({
-  numbered: Boolean,
-  multiline: Boolean,
+  // Étapes : affichées comme les cartes « Étape N » de Mealie
+  steps: Boolean,
   addLabel: { type: String, default: 'Ajouter' }
 })
 
@@ -29,16 +31,33 @@ function move(index, delta) {
 </script>
 
 <template>
-  <ol ref="list" class="list-editor" :class="{ numbered }">
+  <ol ref="list" class="list-editor">
     <li v-for="(item, i) in items" :key="i">
-      <span v-if="numbered" class="index">{{ i + 1 }}</span>
-      <textarea v-if="multiline" v-model="items[i]" rows="3" />
-      <input v-else v-model="items[i]" />
-      <div class="item-actions">
-        <button v-if="numbered" type="button" class="icon" title="Monter" :disabled="i === 0" @click="move(i, -1)">↑</button>
-        <button type="button" class="icon" title="Supprimer" @click="remove(i)">✕</button>
+      <div v-if="steps" class="step-card">
+        <header>
+          <span>Étape {{ i + 1 }}</span>
+          <span class="item-actions">
+            <button type="button" class="btn icon" title="Monter" :disabled="i === 0" @click="move(i, -1)">
+              <MdiIcon :path="mdiArrowUp" :size="20" />
+            </button>
+            <button type="button" class="btn icon" title="Supprimer" @click="remove(i)">
+              <MdiIcon :path="mdiClose" :size="20" />
+            </button>
+          </span>
+        </header>
+        <textarea v-model="items[i]" rows="3" :aria-label="`Étape ${i + 1}`" />
       </div>
+      <template v-else>
+        <label class="field"><input v-model="items[i]" :aria-label="`Ingrédient ${i + 1}`" /></label>
+        <button type="button" class="btn icon" title="Supprimer" @click="remove(i)">
+          <MdiIcon :path="mdiClose" :size="20" />
+        </button>
+      </template>
     </li>
   </ol>
-  <button type="button" class="ghost small" @click="add">+ {{ addLabel }}</button>
+  <div class="row end">
+    <button type="button" class="btn elevated success" @click="add">
+      <MdiIcon :path="mdiPlus" :size="18" /> {{ addLabel }}
+    </button>
+  </div>
 </template>

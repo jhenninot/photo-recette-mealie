@@ -13,8 +13,8 @@ export default defineConfig({
         short_name: 'Photo Recette',
         description: 'Photographiez une recette, Gemini la transcrit et l\'envoie dans Mealie.',
         lang: 'fr',
-        theme_color: '#c2410c',
-        background_color: '#fffbf5',
+        theme_color: '#E58325',
+        background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
         icons: [
