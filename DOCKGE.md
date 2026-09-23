@@ -45,8 +45,8 @@ Dans Dockge, ouvrez la stack **photo-recette-mealie** puis cliquez sur **Modifie
 
 ### compose.yaml
 
-NPM étant sur une autre machine, l'application doit publier son port sur le réseau local du serveur B.
-Remplacez `192.168.1.20` par l'IP locale du serveur B :
+NPM étant sur une autre machine, l'application publie simplement son port 3000 sur le serveur B.
+Le `compose.yaml` fourni convient tel quel :
 
 ```yaml
 services:
@@ -57,16 +57,17 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      # Port publié uniquement sur l'interface du réseau local (pas sur une éventuelle interface publique)
-      - "192.168.1.20:3000:3000"
+      - "3000:3000"
     volumes:
       - ./data:/app/data
 ```
 
-> - Si le port 3000 est déjà pris sur le serveur B, changez seulement le premier : `"192.168.1.20:3010:3000"`,
+> - Si le port 3000 est déjà pris sur le serveur B, changez seulement le premier : `"3010:3000"`,
 >   et utilisez 3010 dans NPM.
-> - Si l'IP du serveur B peut changer, fixez-la (bail DHCP statique sur la box ou le routeur),
->   sinon NPM ne le retrouvera plus.
+> - Fixez l'IP locale du serveur B (bail DHCP statique sur la box ou le routeur), sinon NPM ne le retrouvera plus.
+> - Cas particulier : si le serveur B a une **IP publique directement sur une de ses cartes réseau**
+>   (serveur loué, pas de box devant), limitez le port au réseau local avec `"192.168.1.20:3000:3000"`,
+>   sinon l'application serait joignable depuis Internet sans passer par NPM. Derrière une box, c'est inutile.
 
 ### .env
 
