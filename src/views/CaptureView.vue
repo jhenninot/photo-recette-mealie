@@ -69,7 +69,16 @@ async function extract() {
       form.append('photos', await compressImage(photo.file), `page-${i + 1}.jpg`)
     }
     const data = await api('/recipes/extract', { method: 'POST', form })
-    recipe.value = { ...data.recipe, tags: data.recipe.tags || [], categories: data.recipe.categories || [] }
+    // 0 = inconnu : champ laissé vide plutôt qu'afficher « 0 »
+    const orEmpty = n => Number(n) || null
+    recipe.value = {
+      ...data.recipe,
+      servings: orEmpty(data.recipe.servings),
+      yieldQuantity: orEmpty(data.recipe.yieldQuantity),
+      ingredients: (data.recipe.ingredients || []).map(i => ({ ...i, quantity: orEmpty(i.quantity) })),
+      tags: data.recipe.tags || [],
+      categories: data.recipe.categories || []
+    }
     // La photo originale n'est pas conservée
     clearPhotos()
     step.value = 'review'

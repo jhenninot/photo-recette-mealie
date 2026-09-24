@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
-import { mdiAccount, mdiLogout, mdiSilverwareVariant } from '@mdi/js'
+import { mdiAccount, mdiLogout, mdiRefresh, mdiSilverwareVariant } from '@mdi/js'
+import { registerSW } from 'virtual:pwa-register'
 import { session, setSession } from './api.js'
 import MdiIcon from './components/MdiIcon.vue'
 import LoginView from './views/LoginView.vue'
@@ -9,6 +10,18 @@ import AccountView from './views/AccountView.vue'
 
 const page = ref('capture')
 
+// Nouvelle version déployée : l'appli installée garde l'ancienne en cache tant qu'on ne recharge pas
+const needRefresh = ref(false)
+const updateSW = registerSW({
+  onNeedRefresh() { needRefresh.value = true },
+  onRegisteredSW(url, registration) {
+    if (!registration) return
+    const check = () => registration.update().catch(() => {})
+    setInterval(check, 60 * 60 * 1000)
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check() })
+  }
+})
+
 function logout() {
   setSession(null, null)
   page.value = 'capture'
@@ -16,6 +29,10 @@ function logout() {
 </script>
 
 <template>
+  <div v-if="needRefresh" class="update-banner">
+    <span>Nouvelle version disponible</span>
+    <button class="btn text" @click="updateSW(true)"><MdiIcon :path="mdiRefresh" :size="18" /> Mettre à jour</button>
+  </div>
   <LoginView v-if="!session.token" />
   <template v-else>
     <header class="app-bar">

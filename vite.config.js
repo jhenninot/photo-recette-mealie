@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [
     vue(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Mise à jour proposée par une bannière (App.vue) : un rechargement forcé ferait perdre la recette en cours
+      registerType: 'prompt',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Photo Recette → Mealie',

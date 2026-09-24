@@ -180,6 +180,12 @@ hr.divider { border: 0; border-top: 1px solid var(--divider); margin: 8px 0; wid
 .ingredient-grid .note { grid-column: 1 / -1; }
 .ingredient-grid input { min-width: 0; }
 
+.update-banner {
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 4px 8px 4px 16px; background: var(--accent); color: #fff;
+}
+.update-banner .btn { color: #fff; }
+
 .sticky-actions { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 35%); }
 
 /* --- Utilisateurs --- */
