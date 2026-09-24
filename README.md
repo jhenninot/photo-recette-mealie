@@ -32,6 +32,7 @@ Copiez `.env.example` en `.env` et renseignez au minimum :
 | `MEALIE_PUBLIC_URL` | URL de Mealie pour les liens affichés dans l'application (facultatif) |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Premier administrateur, créé au premier démarrage |
 | `GEMINI_MODEL` / `GEMINI_IMAGE_MODEL` | Modèles Gemini utilisés (facultatif, pour passer à un modèle plus récent) |
+| `GEMINI_IMAGE_ENABLED` | `false` pour ne pas générer d'image du plat (ex. génération d'image non disponible dans votre pays) |
 
 ## Utilisateurs
 

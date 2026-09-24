@@ -17,7 +17,7 @@ const extracting = ref(false)
 const error = ref('')
 
 const recipe = ref(null)
-const image = reactive({ loading: false, data: null, mimeType: null, error: '' })
+const image = reactive({ loading: false, data: null, mimeType: null, error: '', disabled: false })
 const sending = ref(false)
 const result = ref(null)
 
@@ -76,6 +76,8 @@ async function generateImage() {
     image.mimeType = generated.mimeType
   } catch (err) {
     image.error = err.message
+    // Génération d'image impossible sur ce serveur : inutile de proposer de réessayer
+    image.disabled = err.code === 'image-disabled'
   } finally {
     image.loading = false
   }
@@ -106,7 +108,7 @@ function restart() {
   if (step.value === 'review' && !confirm('Abandonner cette recette ?')) return
   clearPhotos()
   recipe.value = null
-  Object.assign(image, { loading: false, data: null, mimeType: null, error: '' })
+  Object.assign(image, { loading: false, data: null, mimeType: null, error: '', disabled: false })
   result.value = null
   error.value = ''
   step.value = 'photos'
@@ -162,7 +164,7 @@ function restart() {
           <template v-if="image.loading"><span class="spinner large" /> Gemini prépare une photo du plat…</template>
           <template v-else-if="image.error"><MdiIcon :path="mdiChefHat" :size="48" /> {{ image.error }}</template>
         </div>
-        <button class="btn elevated primary regen" :disabled="image.loading" @click="generateImage">
+        <button v-if="!image.disabled" class="btn elevated primary regen" :disabled="image.loading" @click="generateImage">
           <MdiIcon :path="mdiRefresh" :size="18" /> {{ imageSrc ? 'Autre image' : 'Réessayer' }}
         </button>
       </div>

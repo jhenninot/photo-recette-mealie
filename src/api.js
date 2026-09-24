@@ -44,7 +44,7 @@ export async function api(path, { method = 'GET', body, form } = {}) {
   }
   const data = await res.json().catch(() => ({}))
   if (res.status === 401 && session.token) setSession(null, null)
-  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`)
+  if (!res.ok) throw Object.assign(new Error(data.error || `Erreur ${res.status}`), { code: data.code })
   return data
 }
 

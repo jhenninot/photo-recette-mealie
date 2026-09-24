@@ -192,6 +192,7 @@ Les recettes, elles, sont dans Mealie.
 | **413 Request Entity Too Large** | Ajoutez `client_max_body_size 50m;` dans l'onglet *Advanced*. |
 | « Clé Gemini invalide » | `GEMINI_API_KEY` erronée ; après correction du `.env`, redémarrez la stack. |
 | « Modèle Gemini introuvable » | Nom de modèle retiré ou mal saisi dans `GEMINI_MODEL` / `GEMINI_IMAGE_MODEL`. |
+| « Génération d'image … pas disponible dans votre pays » | Google n'autorise pas la génération d'image depuis votre pays : les recettes partent sans image. Ajoutez `GEMINI_IMAGE_ENABLED=false` au `.env` pour ne plus la tenter. |
 | « Mealie … 401 » | Jeton Mealie invalide ou expiré : régénérez-le dans Mealie. |
 | « Serveur injoignable » / erreur réseau vers Mealie | `MEALIE_URL` injoignable depuis le conteneur. Testez : `docker compose exec photo-recette sh -c 'wget -qO- "$MEALIE_URL/api/app/about"'` |
 | « Trop de tentatives » à la connexion | 10 essais ratés en 15 minutes : attendez 15 minutes. |

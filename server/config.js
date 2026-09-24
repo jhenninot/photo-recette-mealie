@@ -23,7 +23,8 @@ export const config = {
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
     textModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-    imageModel: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image'
+    imageModel: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image',
+    imageEnabled: !/^(false|0|off|non)$/i.test(process.env.GEMINI_IMAGE_ENABLED || '')
   },
   mealie: {
     url: (process.env.MEALIE_URL || '').replace(/\/+$/, ''),

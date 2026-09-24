@@ -25,7 +25,7 @@ const handle = fn => async (req, res) => {
     await fn(req, res)
   } catch (err) {
     console.error(`[${req.method} ${req.path}]`, err.message)
-    res.status(err.status || 500).json({ error: err.message || 'Erreur interne' })
+    res.status(err.status || 500).json({ error: err.message || 'Erreur interne', code: err.code })
   }
 }
 const badRequest = message => Object.assign(new Error(message), { status: 400 })

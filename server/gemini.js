@@ -8,19 +8,37 @@ function ai() {
   return client
 }
 
-// Traduit les erreurs de l'API Gemini (souvent du JSON brut) en message lisible
+const RETRY_DELAYS = [2000, 5000, 10000]
+const isTransient = msg => /UNAVAILABLE|503|overloaded|INTERNAL|500|DEADLINE_EXCEEDED|504/i.test(msg)
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+// Traduit les erreurs de l'API Gemini (souvent du JSON brut) en message lisible.
+// Les surcharges temporaires (503…) sont retentées quelques fois avant d'abandonner.
 async function call(request) {
-  try {
-    return await ai().models.generateContent(request)
-  } catch (err) {
-    const msg = String(err?.message || err)
-    console.error('[gemini]', msg.slice(0, 500))
-    if (/API_KEY_INVALID|API key not valid/i.test(msg)) throw new Error('Clé Gemini invalide (GEMINI_API_KEY)')
-    if (/RESOURCE_EXHAUSTED|429/.test(msg)) throw new Error('Quota Gemini dépassé, réessayez plus tard')
-    if (/NOT_FOUND|404/.test(msg)) throw new Error(`Modèle Gemini introuvable (${request.model})`)
-    if (/UNAVAILABLE|503|overloaded/i.test(msg)) throw new Error('Gemini est surchargé, réessayez dans un instant')
-    throw new Error('Erreur Gemini, réessayez')
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await ai().models.generateContent(request)
+    } catch (err) {
+      const msg = String(err?.message || err)
+      if (attempt < RETRY_DELAYS.length && isTransient(msg)) {
+        console.warn(`[gemini] indisponible, nouvel essai dans ${RETRY_DELAYS[attempt] / 1000} s`)
+        await sleep(RETRY_DELAYS[attempt])
+        continue
+      }
+      throw translateError(err, request)
+    }
   }
+}
+
+function translateError(err, request) {
+  const msg = String(err?.message || err)
+  console.error('[gemini]', msg.slice(0, 500))
+  if (/API_KEY_INVALID|API key not valid/i.test(msg)) return new Error('Clé Gemini invalide (GEMINI_API_KEY)')
+  if (/not available in your (country|region)|location is not supported/i.test(msg)) return regionError()
+  if (/RESOURCE_EXHAUSTED|429/.test(msg)) return new Error('Quota Gemini dépassé, réessayez plus tard')
+  if (/NOT_FOUND|404/.test(msg)) return new Error(`Modèle Gemini introuvable (${request.model})`)
+  if (/UNAVAILABLE|503|overloaded/i.test(msg)) return new Error('Gemini est surchargé, réessayez dans un instant')
+  return new Error('Erreur Gemini, réessayez')
 }
 
 const recipeSchema = {
@@ -100,7 +118,23 @@ lumière naturelle douce venant du côté, faible profondeur de champ, vue de tr
 Style réaliste de livre de cuisine moderne. Aucun texte, aucun logo, aucune main.`
 }
 
+// Génération d'image indisponible (désactivée, ou refusée par Google dans ce pays) :
+// on ne rappelle plus Gemini jusqu'au redémarrage, la recette part sans image.
+let imageUnavailable = !config.gemini.imageEnabled
+const IMAGE_DISABLED = 'image-disabled'
+
+function regionError() {
+  imageUnavailable = true
+  return Object.assign(new Error('La génération d\'image Gemini n\'est pas disponible dans votre pays'),
+    { status: 403, code: IMAGE_DISABLED })
+}
+
 export async function generateRecipeImage(recipe) {
+  if (imageUnavailable) {
+    throw Object.assign(new Error(config.gemini.imageEnabled
+      ? 'La génération d\'image Gemini n\'est pas disponible dans votre pays'
+      : 'Génération d\'image désactivée'), { status: 403, code: IMAGE_DISABLED })
+  }
   const response = await call({
     model: config.gemini.imageModel,
     contents: imagePrompt(recipe),
