@@ -7,7 +7,7 @@ import { config, missingConfig } from './config.js'
 import { requireAuth, requireAdmin, signToken } from './auth.js'
 import { bootstrapAdmin, createUser, deleteUser, listUsers, setPassword, verifyPassword } from './users.js'
 import { extractRecipe, generateRecipeImage } from './gemini.js'
-import { checkMealie, sendRecipe } from './mealie.js'
+import { categoryNames, checkMealie, sendRecipe, unitNames } from './mealie.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -79,11 +79,17 @@ app.delete('/api/users/:username', requireAuth, requireAdmin, handle(async (req,
   res.json({ ok: true })
 }))
 
+// Unités et catégories existantes dans Mealie (aide à l'extraction et suggestions)
+const mealieCatalog = async () => {
+  const [units, categories] = await Promise.all([unitNames(), categoryNames()])
+  return { units, categories }
+}
+
 // === RECETTES ===
 // 1. Photo(s) de la page → recette structurée (les photos ne sont jamais conservées)
 app.post('/api/recipes/extract', requireAuth, upload.array('photos', 4), handle(async (req, res) => {
   if (!req.files?.length) throw badRequest('Ajoutez au moins une photo')
-  res.json({ recipe: await extractRecipe(req.files) })
+  res.json({ recipe: await extractRecipe(req.files, await mealieCatalog()) })
 }))
 
 // 2. Recette → image générée
@@ -100,6 +106,10 @@ app.post('/api/recipes/mealie', requireAuth, handle(async (req, res) => {
   const result = await sendRecipe(recipe, image)
   console.log(`[mealie] « ${recipe.name} » ajoutée par ${req.user.username} → ${result.slug}`)
   res.json(result)
+}))
+
+app.get('/api/mealie/catalog', requireAuth, handle(async (req, res) => {
+  res.json(await mealieCatalog())
 }))
 
 app.get('/api/mealie/check', requireAuth, requireAdmin, handle(async (req, res) => {

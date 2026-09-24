@@ -47,20 +47,39 @@ const recipeSchema = {
     found: { type: 'boolean', description: 'false si aucune recette lisible sur les photos' },
     name: { type: 'string' },
     description: { type: 'string', description: 'Courte présentation du plat (1 à 3 phrases), tirée du livre si présente' },
-    recipeYield: { type: 'string', description: 'Ex. « 4 personnes », « 12 biscuits »' },
-    servings: { type: 'number', description: 'Nombre de portions, 0 si inconnu' },
+    servings: { type: 'number', description: 'Nombre de personnes / portions, 0 si inconnu' },
+    yieldQuantity: {
+      type: 'number',
+      description: 'Quantité produite si le rendement n\'est pas en personnes (12 pour « 12 biscuits »), sinon 0'
+    },
+    yieldUnit: { type: 'string', description: 'Unité de ce rendement (« biscuits », « bocaux »), sinon vide' },
     prepTime: { type: 'string', description: 'Ex. « 20 min », vide si inconnu' },
     cookTime: { type: 'string', description: 'Ex. « 1 h 15 », vide si inconnu' },
     totalTime: { type: 'string', description: 'Vide si inconnu' },
     ingredients: {
       type: 'array',
-      items: { type: 'string' },
-      description: 'Une ligne par ingrédient, avec quantité et unité, telle qu\'écrite dans le livre'
+      items: {
+        type: 'object',
+        properties: {
+          quantity: { type: 'number', description: 'Quantité en nombre décimal (½ → 0.5), 0 si aucune' },
+          unit: { type: 'string', description: 'Unité au singulier et en toutes lettres (« gramme », « cuillère à soupe »), vide si aucune' },
+          food: { type: 'string', description: 'Aliment au singulier, sans préparation (« oignon »), vide pour un titre de groupe' },
+          note: { type: 'string', description: 'Précisions (« émincé », « bien mûres »), ou titre du groupe (« Pour la pâte »)' },
+          originalText: { type: 'string', description: 'La ligne telle qu\'écrite dans le livre' }
+        },
+        required: ['quantity', 'unit', 'food', 'note', 'originalText']
+      },
+      description: 'Un élément par ingrédient, dans l\'ordre du livre'
     },
     instructions: {
       type: 'array',
       items: { type: 'string' },
       description: 'Une entrée par étape, dans l\'ordre'
+    },
+    categories: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '1 ou 2 catégories de plat (« Entrée », « Plat principal », « Dessert », « Accompagnement »…)'
     },
     tags: {
       type: 'array',
@@ -70,8 +89,8 @@ const recipeSchema = {
     source: { type: 'string', description: 'Titre du livre / auteur / page si visibles, sinon vide' },
     notes: { type: 'string', description: 'Astuces, variantes ou conseils présents sur la page, sinon vide' }
   },
-  required: ['found', 'name', 'description', 'recipeYield', 'servings', 'prepTime', 'cookTime', 'totalTime',
-    'ingredients', 'instructions', 'tags', 'source', 'notes']
+  required: ['found', 'name', 'description', 'servings', 'yieldQuantity', 'yieldUnit', 'prepTime', 'cookTime', 'totalTime',
+    'ingredients', 'instructions', 'categories', 'tags', 'source', 'notes']
 }
 
 const EXTRACT_PROMPT = `Tu reçois une ou plusieurs photos de pages d'un livre de cuisine (plusieurs photos = pages successives de la même recette).
@@ -79,17 +98,24 @@ Transcris fidèlement la recette en JSON :
 - conserve la langue du livre, les quantités et les unités exactes ; n'invente aucun ingrédient ni aucune étape ;
 - corrige seulement les coupures de mots et les erreurs évidentes de lecture ;
 - sépare chaque ingrédient et chaque étape ; retire les numéros d'étape du texte ;
+- ingrédients : décompose en quantité, unité, aliment et note ; abréviations développées (g → gramme, c. à s. → cuillère à soupe) ;
+  « 2 oignons » → quantité 2, unité vide, aliment « oignon » ; « sel, poivre » → deux ingrédients sans quantité ;
+  un sous-titre (« Pour la sauce ») devient un élément avec aliment vide et le sous-titre en note ;
 - si la page contient plusieurs recettes, prends la recette principale (la plus complète) ;
 - si aucune recette n'est lisible, renvoie found = false et des champs vides.`
 
-export async function extractRecipe(images) {
+export async function extractRecipe(images, { units = [], categories = [] } = {}) {
+  const catalogHint = [
+    units.length && `Unités déjà connues, à réutiliser à l'identique quand elles conviennent : ${units.join(', ')}.`,
+    categories.length && `Catégories existantes, à choisir en priorité (n'en crée une nouvelle que si aucune ne convient) : ${categories.join(', ')}.`
+  ].filter(Boolean).map(line => `\n${line}`).join('')
   const response = await call({
     model: config.gemini.textModel,
     contents: [{
       role: 'user',
       parts: [
         ...images.map(img => ({ inlineData: { mimeType: img.mimetype, data: img.buffer.toString('base64') } })),
-        { text: EXTRACT_PROMPT }
+        { text: EXTRACT_PROMPT + catalogHint }
       ]
     }],
     config: {
@@ -110,7 +136,7 @@ export async function extractRecipe(images) {
 }
 
 function imagePrompt(recipe) {
-  const ingredients = (recipe.ingredients || []).slice(0, 12).join(', ')
+  const ingredients = (recipe.ingredients || []).map(i => i.food || i.originalText).filter(Boolean).slice(0, 12).join(', ')
   return `Photographie culinaire professionnelle et appétissante du plat « ${recipe.name} ».
 ${recipe.description ? `Description : ${recipe.description}\n` : ''}Ingrédients principaux : ${ingredients}.
 Le plat terminé, dressé dans une assiette ou un plat de service adapté, sur une table en bois ou en lin,

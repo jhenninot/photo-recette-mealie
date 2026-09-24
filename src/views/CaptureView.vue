@@ -1,11 +1,12 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   mdiAccountGroup, mdiCamera, mdiCheck, mdiChefHat, mdiClockOutline, mdiClose, mdiFormatListChecks,
   mdiImageMultiple, mdiOpenInNew, mdiRefresh, mdiSend, mdiTag, mdiTextRecognition
 } from '@mdi/js'
 import { api, compressImage } from '../api.js'
 import MdiIcon from '../components/MdiIcon.vue'
+import IngredientEditor from '../components/IngredientEditor.vue'
 import ListEditor from '../components/ListEditor.vue'
 import TagsInput from '../components/TagsInput.vue'
 
@@ -20,6 +21,19 @@ const recipe = ref(null)
 const image = reactive({ loading: false, data: null, mimeType: null, error: '', disabled: false })
 const sending = ref(false)
 const result = ref(null)
+const catalog = reactive({ units: [], categories: [] })
+
+onMounted(async () => {
+  try {
+    Object.assign(catalog, await api('/mealie/catalog'))
+  } catch { /* simples suggestions */ }
+})
+
+const formatQty = n => String(Math.round(n * 100) / 100).replace('.', ',')
+const yieldLabels = computed(() => [
+  recipe.value?.servings > 0 && `${formatQty(recipe.value.servings)} portion${recipe.value.servings > 1 ? 's' : ''}`,
+  recipe.value?.yieldQuantity > 0 && `${formatQty(recipe.value.yieldQuantity)} ${recipe.value.yieldUnit || ''}`.trim()
+].filter(Boolean))
 
 const imageSrc = computed(() => image.data ? `data:${image.mimeType};base64,${image.data}` : null)
 const times = computed(() => [
@@ -55,7 +69,7 @@ async function extract() {
       form.append('photos', await compressImage(photo.file), `page-${i + 1}.jpg`)
     }
     const data = await api('/recipes/extract', { method: 'POST', form })
-    recipe.value = { ...data.recipe, tags: data.recipe.tags || [] }
+    recipe.value = { ...data.recipe, tags: data.recipe.tags || [], categories: data.recipe.categories || [] }
     // La photo originale n'est pas conservée
     clearPhotos()
     step.value = 'review'
@@ -89,7 +103,7 @@ async function send() {
   try {
     const payload = {
       ...recipe.value,
-      ingredients: recipe.value.ingredients.map(s => s.trim()).filter(Boolean),
+      ingredients: recipe.value.ingredients.filter(i => i.food?.trim() || i.note?.trim()),
       instructions: recipe.value.instructions.map(s => s.trim()).filter(Boolean)
     }
     result.value = await api('/recipes/mealie', {
@@ -171,10 +185,11 @@ function restart() {
       <div class="card-title">{{ recipe.name || 'Sans titre' }}</div>
       <div class="card-text">
         <div class="meta">
-          <span v-if="recipe.recipeYield"><MdiIcon :path="mdiAccountGroup" :size="18" /> {{ recipe.recipeYield }}</span>
+          <span v-for="label in yieldLabels" :key="label"><MdiIcon :path="mdiAccountGroup" :size="18" /> {{ label }}</span>
           <span v-for="[label, value] in times" :key="label"><MdiIcon :path="mdiClockOutline" :size="18" /> {{ label }} : {{ value }}</span>
         </div>
-        <div v-if="recipe.tags.length" class="chips">
+        <div v-if="recipe.categories.length || recipe.tags.length" class="chips">
+          <span v-for="category in recipe.categories" :key="`c-${category}`" class="chip category">{{ category }}</span>
           <span v-for="tag in recipe.tags" :key="tag" class="chip">{{ tag }}</span>
         </div>
       </div>
@@ -186,24 +201,33 @@ function restart() {
         <label class="field"><span>Nom de la recette</span><input v-model="recipe.name" required /></label>
         <label class="field"><span>Description</span><textarea v-model="recipe.description" rows="3" /></label>
         <div class="grid">
-          <label class="field"><span>Portions</span><input v-model="recipe.recipeYield" placeholder="4 personnes" /></label>
+          <label class="field"><span>Portions</span>
+            <input v-model.number="recipe.servings" type="number" min="0" step="any" inputmode="decimal" placeholder="4" />
+          </label>
           <label class="field"><span>Préparation</span><input v-model="recipe.prepTime" placeholder="20 min" /></label>
           <label class="field"><span>Cuisson</span><input v-model="recipe.cookTime" placeholder="45 min" /></label>
           <label class="field"><span>Temps total</span><input v-model="recipe.totalTime" placeholder="1 h 05" /></label>
+          <label class="field"><span>Rendement (facultatif)</span>
+            <input v-model.number="recipe.yieldQuantity" type="number" min="0" step="any" inputmode="decimal" placeholder="12" />
+          </label>
+          <label class="field"><span>Unité du rendement</span><input v-model="recipe.yieldUnit" placeholder="biscuits" /></label>
         </div>
       </div>
     </article>
 
     <h3 class="section-title"><MdiIcon :path="mdiFormatListChecks" /> Ingrédients</h3>
-    <ListEditor v-model="recipe.ingredients" add-label="Ingrédient" />
+    <IngredientEditor v-model="recipe.ingredients" :units="catalog.units" />
 
     <h3 class="section-title"><MdiIcon :path="mdiChefHat" /> Instructions</h3>
     <ListEditor v-model="recipe.instructions" steps add-label="Étape" />
 
     <article class="card">
-      <div class="card-title"><MdiIcon :path="mdiTag" :size="20" /> Tags et notes</div>
+      <div class="card-title"><MdiIcon :path="mdiTag" :size="20" /> Catégories, tags et notes</div>
       <div class="card-text">
-        <TagsInput v-model="recipe.tags" />
+        <div class="field-group"><span class="muted">Catégories</span>
+          <TagsInput v-model="recipe.categories" placeholder="Ajouter une catégorie…" :suggestions="catalog.categories" />
+        </div>
+        <div class="field-group"><span class="muted">Tags</span><TagsInput v-model="recipe.tags" /></div>
         <label class="field"><span>Conseils / notes</span><textarea v-model="recipe.notes" rows="2" /></label>
         <label class="field"><span>Source</span><input v-model="recipe.source" placeholder="Livre, auteur, page" /></label>
       </div>
@@ -231,8 +255,11 @@ function restart() {
     <article class="card">
       <div v-if="imageSrc" class="recipe-image"><img :src="imageSrc" alt="" /></div>
       <div class="card-title">{{ recipe.name }}</div>
-      <div v-if="recipe.tags.length" class="card-text">
-        <div class="chips"><span v-for="tag in recipe.tags" :key="tag" class="chip">{{ tag }}</span></div>
+      <div v-if="recipe.categories.length || recipe.tags.length" class="card-text">
+        <div class="chips">
+          <span v-for="category in recipe.categories" :key="`c-${category}`" class="chip category">{{ category }}</span>
+          <span v-for="tag in recipe.tags" :key="tag" class="chip">{{ tag }}</span>
+        </div>
       </div>
       <div class="card-actions">
         <a class="btn text accent-text" :href="result.url" target="_blank" rel="noopener">
