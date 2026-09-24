@@ -20,8 +20,9 @@
   --radius: 4px;
   color-scheme: light;
 }
+/* Mode nuit : « auto » suit le réglage de l'appareil, « dark » / « light » forcent le thème */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #1e1e1e;
     --surface: #2b2b2b;
     --surface-variant: #333333;
@@ -31,6 +32,16 @@
     --divider: rgba(255, 255, 255, .12);
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --bg: #1e1e1e;
+  --surface: #2b2b2b;
+  --surface-variant: #333333;
+  --text: rgba(255, 255, 255, .87);
+  --muted: rgba(255, 255, 255, .6);
+  --border: rgba(255, 255, 255, .38);
+  --divider: rgba(255, 255, 255, .12);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -206,3 +217,16 @@ hr.divider { border: 0; border-top: 1px solid var(--divider); margin: 8px 0; wid
   .ingredient-grid { grid-template-columns: 5rem 1fr; }
   .ingredient-grid .food { grid-column: 1 / -1; }
 }
+
+/* --- Sélecteur à segments (v-btn-toggle) --- */
+.segmented { display: flex; border: 1px solid var(--primary); border-radius: var(--radius); overflow: hidden; }
+.segmented button {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 40px; padding: 0 8px; border: 0; background: transparent; color: var(--primary);
+  font: inherit; font-size: .875rem; font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.segmented button + button { border-left: 1px solid var(--primary); }
+.segmented button.active { background: var(--primary); color: #fff; }
+.small-text { font-size: .875rem; }
+@media (max-width: 360px) { .segmented button .mdi { display: none; } }
+

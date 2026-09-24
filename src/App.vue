@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { mdiAccount, mdiLogout, mdiRefresh, mdiSilverwareVariant } from '@mdi/js'
 import { registerSW } from 'virtual:pwa-register'
-import { session, setSession } from './api.js'
+import { api, session, setSession } from './api.js'
 import MdiIcon from './components/MdiIcon.vue'
 import LoginView from './views/LoginView.vue'
 import CaptureView from './views/CaptureView.vue'
@@ -21,6 +21,11 @@ const updateSW = registerSW({
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check() })
   }
 })
+
+// Rafraîchit le compte (thème choisi depuis un autre appareil, droits…)
+if (session.token) {
+  api('/auth/me').then(({ user }) => setSession(session.token, user)).catch(() => {})
+}
 
 function logout() {
   setSession(null, null)

@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { applyTheme } from './theme.js'
 
 const TOKEN_KEY = 'photo-recette-token'
 const USER_KEY = 'photo-recette-user'
@@ -15,6 +16,8 @@ export const session = reactive({
 export function setSession(token, user) {
   session.token = token
   session.user = user
+  // Le thème du compte s'applique à la connexion ; à la déconnexion, l'appareil garde le dernier choix
+  if (user?.theme) applyTheme(user.theme)
   try {
     if (token) {
       localStorage.setItem(TOKEN_KEY, token)

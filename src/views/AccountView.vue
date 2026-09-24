@@ -1,10 +1,38 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { mdiAccount, mdiAccountGroup, mdiAccountPlus, mdiArrowLeft, mdiDelete, mdiKeyVariant, mdiLan, mdiLockReset } from '@mdi/js'
-import { api, session } from '../api.js'
+import {
+  mdiAccount, mdiAccountGroup, mdiAccountPlus, mdiArrowLeft, mdiDelete, mdiKeyVariant, mdiLan, mdiLockReset,
+  mdiPaletteOutline, mdiThemeLightDark, mdiWeatherNight, mdiWeatherSunny
+} from '@mdi/js'
+import { api, session, setSession } from '../api.js'
+import { applyTheme } from '../theme.js'
 import MdiIcon from '../components/MdiIcon.vue'
 
 const emit = defineEmits(['back'])
+
+// --- Apparence ---
+const themeOptions = [
+  { value: 'auto', label: 'Automatique', icon: mdiThemeLightDark },
+  { value: 'light', label: 'Clair', icon: mdiWeatherSunny },
+  { value: 'dark', label: 'Sombre', icon: mdiWeatherNight }
+]
+const themeError = ref('')
+
+async function chooseTheme(theme) {
+  const previous = session.user?.theme || 'auto'
+  if (theme === previous) return
+  themeError.value = ''
+  applyTheme(theme)
+  session.user = { ...session.user, theme }
+  try {
+    const { user } = await api('/auth/theme', { method: 'PUT', body: { theme } })
+    setSession(session.token, user)
+  } catch (err) {
+    applyTheme(previous)
+    session.user = { ...session.user, theme: previous }
+    themeError.value = err.message
+  }
+}
 
 const pwd = reactive({ currentPassword: '', newPassword: '', message: '', error: '' })
 
@@ -84,6 +112,25 @@ onMounted(() => {
       <h2>{{ session.user?.username }}</h2>
       <p>{{ session.user?.isAdmin ? 'Administrateur' : 'Utilisateur' }}</p>
       <hr class="divider" />
+    </div>
+
+    <div class="card left-border">
+      <div class="card-title"><MdiIcon :path="mdiPaletteOutline" :size="22" /> Apparence</div>
+      <div class="card-text">
+        <div class="segmented" role="radiogroup" aria-label="Thème">
+          <button v-for="opt in themeOptions" :key="opt.value" type="button" role="radio"
+            :aria-checked="(session.user?.theme || 'auto') === opt.value"
+            :class="{ active: (session.user?.theme || 'auto') === opt.value }" @click="chooseTheme(opt.value)">
+            <MdiIcon :path="opt.icon" :size="20" /> {{ opt.label }}
+          </button>
+        </div>
+        <p class="muted small-text">
+          {{ (session.user?.theme || 'auto') === 'auto'
+            ? 'Le mode nuit suit automatiquement le réglage de votre appareil.'
+            : 'Ce choix s\'applique sur tous vos appareils.' }}
+        </p>
+        <p v-if="themeError" class="error">{{ themeError }}</p>
+      </div>
     </div>
 
     <form class="card left-border" @submit.prevent="changePassword">

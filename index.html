@@ -12,6 +12,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
     <title>Photo Recette</title>
+    <script>
+      // Applique le thème mémorisé avant l'affichage, pour éviter un flash clair en mode sombre
+      try {
+        var t = localStorage.getItem('photo-recette-theme')
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t)
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="app"></div>

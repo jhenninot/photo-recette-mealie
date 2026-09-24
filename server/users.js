@@ -4,11 +4,17 @@ import bcrypt from 'bcryptjs'
 import { config } from './config.js'
 
 // Stockage minimaliste des comptes dans data/users.json :
-// [{ username, passwordHash, isAdmin, createdAt }]
+// [{ username, passwordHash, isAdmin, theme, createdAt }]
 const usersFile = path.join(config.dataDir, 'users.json')
 
 export const USERNAME_RE = /^[a-z0-9._-]{2,32}$/
 export const MIN_PASSWORD_LENGTH = 8
+export const THEMES = ['auto', 'light', 'dark']
+
+// Données du compte exposées au navigateur
+export function publicUser(user) {
+  return { username: user.username, isAdmin: !!user.isAdmin, theme: THEMES.includes(user.theme) ? user.theme : 'auto' }
+}
 
 function readAll() {
   if (!fs.existsSync(usersFile)) return []
@@ -66,6 +72,17 @@ export async function setPassword(username, password) {
   if (!user) throw new Error(`Utilisateur « ${name} » introuvable`)
   user.passwordHash = await bcrypt.hash(password, 12)
   writeAll(users)
+}
+
+export function setTheme(username, theme) {
+  if (!THEMES.includes(theme)) throw new Error('Thème inconnu')
+  const name = normalizeUsername(username)
+  const users = readAll()
+  const user = users.find(u => u.username === name)
+  if (!user) throw new Error(`Utilisateur « ${name} » introuvable`)
+  user.theme = theme
+  writeAll(users)
+  return publicUser(user)
 }
 
 export function deleteUser(username) {

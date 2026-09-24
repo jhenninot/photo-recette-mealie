@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { config } from './config.js'
-import { findUser } from './users.js'
+import { findUser, publicUser } from './users.js'
 
 export function signToken(user) {
   return jwt.sign({ sub: user.username }, config.jwtSecret, { expiresIn: config.jwtExpiresIn })
@@ -15,7 +15,7 @@ export function requireAuth(req, res, next) {
     // Le compte doit toujours exister : supprimer un utilisateur révoque ses sessions
     const user = findUser(payload.sub)
     if (!user) return res.status(401).json({ error: 'Compte introuvable' })
-    req.user = { username: user.username, isAdmin: !!user.isAdmin }
+    req.user = publicUser(user)
     next()
   } catch {
     res.status(401).json({ error: 'Session expirée, reconnectez-vous' })

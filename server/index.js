@@ -5,7 +5,7 @@ import multer from 'multer'
 import rateLimit from 'express-rate-limit'
 import { config, missingConfig } from './config.js'
 import { requireAuth, requireAdmin, signToken } from './auth.js'
-import { bootstrapAdmin, createUser, deleteUser, listUsers, setPassword, verifyPassword } from './users.js'
+import { bootstrapAdmin, createUser, deleteUser, listUsers, publicUser, setPassword, setTheme, verifyPassword } from './users.js'
 import { extractRecipe, generateRecipeImage } from './gemini.js'
 import { categoryNames, checkMealie, sendRecipe, unitNames } from './mealie.js'
 
@@ -40,10 +40,16 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHe
 app.post('/api/auth/login', loginLimiter, handle(async (req, res) => {
   const user = await verifyPassword(req.body?.username, req.body?.password)
   if (!user) return res.status(401).json({ error: 'Identifiant ou mot de passe incorrect' })
-  res.json({ token: signToken(user), user: { username: user.username, isAdmin: !!user.isAdmin } })
+  res.json({ token: signToken(user), user: publicUser(user) })
 }))
 
 app.get('/api/auth/me', requireAuth, (req, res) => res.json({ user: req.user }))
+
+app.put('/api/auth/theme', requireAuth, handle(async (req, res) => {
+  try {
+    res.json({ user: setTheme(req.user.username, req.body?.theme) })
+  } catch (err) { throw badRequest(err.message) }
+}))
 
 app.post('/api/auth/password', requireAuth, handle(async (req, res) => {
   const { currentPassword, newPassword } = req.body || {}
